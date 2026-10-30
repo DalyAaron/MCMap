@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MCMap · real places as Minecraft worlds</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23845a3a'/%3E%3Crect width='16' height='6' fill='%235fbf4a'/%3E%3Crect x='3' y='6' width='2' height='2' fill='%235fbf4a'/%3E%3Crect x='10' y='6' width='2' height='3' fill='%235fbf4a'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <aside id="panel">
+    <header class="brand">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M16 2 30 9 16 16 2 9Z" fill="#6fd055"/>
+        <path d="M2 9 16 16v14L2 23Z" fill="#7b5233"/>
+        <path d="M30 9 16 16v14l14-7Z" fill="#5e3e27"/>
+        <path d="M2 9 16 16v4L2 13Z" fill="#58b043"/>
+        <path d="M30 9 16 16v4l14-7Z" fill="#4a9638"/>
+      </svg>
+      <div>
+        <h1>MCMap</h1>
+        <p>Real places, turned into Minecraft worlds</p>
+      </div>
+    </header>
+
+    <div id="engine-banner" class="banner" hidden></div>
+
+    <section class="card">
+      <h2><span class="num">1</span> Choose an area</h2>
+      <div class="presets" id="presets">
+        <button type="button" data-size="0.5">Neighborhood<small>0.5 km</small></button>
+        <button type="button" data-size="1">District<small>1 km</small></button>
+        <button type="button" data-size="2">City center<small>2 km</small></button>
+        <button type="button" data-size="4">City<small>4 km</small></button>
+        <button type="button" data-size="8">Metro<small>8 km</small></button>
+        <button type="button" id="draw-btn" class="draw">Draw your own<small>drag on map</small></button>
+      </div>
+      <div id="area-info" class="info muted">Pick a size to place a square at the map center, or draw a rectangle.</div>
+    </section>
+
+    <section class="card">
+      <h2><span class="num">2</span> Spawn point <span class="opt">optional</span></h2>
+      <div class="row">
+        <button type="button" id="spawn-btn" class="btn ghost" disabled>Pick on map</button>
+        <button type="button" id="spawn-clear" class="btn link" hidden>Clear</button>
+      </div>
+      <div id="spawn-info" class="info muted">Where players appear when they join the world.</div>
+    </section>
+
+    <section class="card">
+      <h2><span class="num">3</span> World settings</h2>
+      <label class="field">
+        <span>Name</span>
+        <input id="name" type="text" maxlength="80" placeholder="My world" spellcheck="false">
+      </label>
+      <div class="field">
+        <span>Edition</span>
+        <div class="seg" data-name="edition">
+          <button type="button" data-value="java">Java</button>
+          <button type="button" data-value="bedrock">Bedrock</button>
+        </div>
+      </div>
+      <div class="field">
+        <span>Generate</span>
+        <div class="seg" data-name="mode">
+          <button type="button" data-value="geo-terrain" title="Buildings, roads and nature on real elevation">Objects + terrain</button>
+          <button type="button" data-value="geo-only" title="Buildings, roads and nature on flat ground">Objects only</button>
+          <button type="button" data-value="terrain-only" title="Real elevation and land cover, no buildings or roads">Terrain only</button>
+        </div>
+      </div>
+      <div class="field">
+        <span>Game mode</span>
+        <div class="seg" data-name="gamemode">
+          <button type="button" data-value="creative">Creative</button>
+          <button type="button" data-value="survival">Survival</button>
+          <button type="button" data-value="spectator">Spectator</button>
+        </div>
+      </div>
+      <div class="field">
+        <span>Time of day</span>
+        <div class="seg" data-name="world_time">
+          <button type="button" data-value="0">Dawn</button>
+          <button type="button" data-value="6000">Noon</button>
+          <button type="button" data-value="12000">Sunset</button>
+          <button type="button" data-value="18000">Midnight</button>
+        </div>
+      </div>
+
+      <details class="advanced" id="advanced">
+        <summary>Advanced</summary>
+        <label class="field slider">
+          <span>Scale <output id="scale-out"></output></span>
+          <input id="scale" type="range" min="0.1" max="2" step="0.05">
+          <small class="muted">Blocks per metre. 1 = real size. Lower it to fit bigger areas.</small>
+        </label>
+        <label class="field slider">
+          <span>Terrain height <output id="height-out"></output></span>
+          <input id="height_multiplier" type="range" min="0.5" max="4" step="0.25">
+        </label>
+        <label class="check"><input type="checkbox" id="interior"> Building interiors</label>
+        <label class="check"><input type="checkbox" id="caves"> Caves, ores and underground biomes</label>
+        <label class="check"><input type="checkbox" id="props_3d"> 3D props (cars, boats, cranes…)</label>
+        <label class="check"><input type="checkbox" id="overture"> Fill in missing buildings from Overture Maps</label>
+        <label class="check"><input type="checkbox" id="map_preview"> Render a map preview image</label>
+        <label class="field java-only">
+          <span>Beyond the area</span>
+          <select id="world_type">
+            <option value="void">Empty void</option>
+            <option value="flat">Flat grass plain</option>
+          </select>
+        </label>
+        <label class="field java-only">
+          <span>Signs</span>
+          <select id="signage">
+            <option value="none">None</option>
+            <option value="basic">Street names and traffic signs</option>
+            <option value="full">Also shop names and house numbers</option>
+          </select>
+        </label>
+        <label class="check java-only" id="install-row"><input type="checkbox" id="install"> Add to Minecraft automatically</label>
+      </details>
+    </section>
+
+    <div class="generate">
+      <button type="button" id="generate" class="btn primary big" disabled>Generate world</button>
+      <div id="form-error" class="error" hidden></div>
+      <div id="dest-info" class="dest muted"></div>
+    </div>
+
+    <section class="card jobs">
+      <h2>Your worlds</h2>
+      <div id="jobs-empty" class="muted">Nothing generated yet.</div>
+      <ul id="jobs"></ul>
+    </section>
+
+    <footer>
+      Powered by <a href="https://github.com/louis-e/arnis" target="_blank" rel="noopener">Arnis</a>.
+      Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors.
+    </footer>
+  </aside>
+
+  <main id="map-wrap">
+    <div id="map"></div>
+    <form id="search" autocomplete="off">
+      <input id="search-input" type="search" placeholder="Search for a place…" aria-label="Search for a place">
+      <ul id="search-results" hidden></ul>
+    </form>
+    <div id="map-hint" class="hint" hidden></div>
+  </main>
+
+  <div id="lightbox" hidden><img alt="World map preview"></div>
+
+  <script src="/static/vendor/leaflet/leaflet.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
